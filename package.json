@@ -4,6 +4,6 @@
   "main": "index.js",
   "dependencies": {
     "mineflayer": "^4.20.1",
-    "http-proxy-agent": "^7.0.2"
+    "socks-proxy-agent": "^8.0.2"
   }
 }
