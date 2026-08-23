@@ -1,11 +1,5 @@
 const http = require('http');
-http.createServer((req, res) => res.end('Bot activo 24/7 desde Android')).listen(process.env.PORT || 3000);
-
-const stdoutWrite = process.stdout.write;
-process.stdout.write = function (string) {
-  if (typeof string === 'string' && (string.includes('Chunk size') || string.includes('partial packet'))) return;
-  return stdoutWrite.apply(process.stdout, arguments);
-};
+http.createServer((req, res) => res.end('Bot activo 24/7 en Android')).listen(process.env.PORT || 3000);
 
 const mineflayer = require('mineflayer');
 
@@ -13,7 +7,7 @@ const CONFIG = {
   host: 'fancyverso.net',
   port: 25565,
   username: 'xafkfx',
-  version: '1.21.11',
+  version: '1.20.4', // Usamos 1.20.4 para evitar el fallo de NBT de la 1.21 en viaversion
   passwordLogin: 'xafk123'
 };
 
@@ -23,18 +17,20 @@ function startBot() {
     port: CONFIG.port,
     username: CONFIG.username,
     version: CONFIG.version,
-    hideErrors: true // <-- Esto evita que el bot rompa la conexión por paquetes de texto coloreados
+    checkTimeoutInterval: 60000
   });
 
   let inSurvival = false;
 
-  // Manejo de errores de paquetes desalineados en 1.21
-  bot._client.on('packet_header', () => {}); 
+  // Anular el choque de paquetes NBT de chat
+  bot._client.on('error', (err) => {
+    if (err.message && err.message.includes('compound')) return;
+  });
 
   bot.on('spawn', async () => {
     if (inSurvival) return;
 
-    console.log('¡Conectado exitosamente sin VPN!');
+    console.log('¡Conectado al servidor!');
 
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
@@ -74,7 +70,11 @@ function startBot() {
     inSurvival = false;
   });
 
-  bot.on('error', err => console.log('Error silenciado:', err.message));
+  bot.on('error', err => {
+    if (!err.message.includes('compound')) {
+      console.log('Error:', err.message);
+    }
+  });
 
   bot.on('end', () => {
     inSurvival = false;
@@ -82,4 +82,5 @@ function startBot() {
     setTimeout(startBot, 15000);
   });
 }
+
 startBot();
