@@ -1,15 +1,9 @@
 {
-  "name": "botsurvival",
+  "name": "bot-survival",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "mineflayer": "^4.37.1"
+    "mineflayer": "^4.20.1",
+    "http-proxy-agent": "^7.0.2"
   }
 }
