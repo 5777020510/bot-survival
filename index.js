@@ -8,18 +8,20 @@ process.stdout.write = function (string) {
 };
 
 const mineflayer = require('mineflayer');
-const { HttpProxyAgent } = require('http-proxy-agent');
+const { SocksProxyAgent } = require('socks-proxy-agent');
 
-// TUS DATOS EXACTOS DE WEBSHARE
-const proxyUrl = 'http://nrsmplds:ty62hirpi3jq@31.59.20.176:6754';
-const agent = new HttpProxyAgent(proxyUrl);
+// CONFIGURA AQUÍ EL PROXY SOCKS5 QUE COPIES DE LA PÁGINA
+const PROXY_IP = '144.22.165.206';       // Ej: '185.199.100.1'
+const PROXY_PORT = '1088'; // Ej: '1080'
+
+const agent = new SocksProxyAgent(`socks5://${PROXY_IP}:${PROXY_PORT}`);
 
 const CONFIG = {
-  host: 'fancyverso.net', // <-- PON AQUÍ LA IP DE TU SERVIDOR DE MINECRAFT
-  port: 25565,                  // <-- PUERTO
-  username: 'xafkfx',   // <-- TU NICK
-  version: '1.21.11',             // <-- TU VERSIÓN DE MINECRAFT
-  passwordLogin: 'xafk123'    // <-- TU CONTRASEÑA EN EL SERVIDOR
+  host: 'fancyverso.net',
+  port: 25565,
+  username: 'xafkfx',
+  version: '1.21.11',
+  passwordLogin: 'xafk123'
 };
 
 function startBot() {
@@ -36,7 +38,7 @@ function startBot() {
   bot.on('spawn', async () => {
     if (inSurvival) return;
 
-    console.log('¡Conectado exitosamente con Proxy Residencial!');
+    console.log('¡Conectado exitosamente con Proxy SOCKS5!');
 
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
@@ -76,7 +78,7 @@ function startBot() {
     inSurvival = false;
   });
 
-  bot.on('error', err => console.log('Error:', err.message));
+  bot.on('error', err => console.log('Error del bot/proxy:', err.message));
 
   bot.on('end', () => {
     inSurvival = false;
