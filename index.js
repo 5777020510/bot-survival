@@ -1,5 +1,5 @@
 const http = require('http');
-http.createServer((req, res) => res.end('Bot activo 24/7')).listen(process.env.PORT || 3000);
+http.createServer((req, res) => res.end('Bot activo 24/7 desde Android')).listen(process.env.PORT || 3000);
 
 const stdoutWrite = process.stdout.write;
 process.stdout.write = function (string) {
@@ -8,13 +8,6 @@ process.stdout.write = function (string) {
 };
 
 const mineflayer = require('mineflayer');
-const { SocksProxyAgent } = require('socks-proxy-agent');
-
-// CONFIGURA AQUÍ EL PROXY SOCKS5 QUE COPIES DE LA PÁGINA
-const PROXY_IP = '144.22.165.206';       // Ej: '185.199.100.1'
-const PROXY_PORT = '1088'; // Ej: '1080'
-
-const agent = new SocksProxyAgent(`socks5://${PROXY_IP}:${PROXY_PORT}`);
 
 const CONFIG = {
   host: 'fancyverso.net',
@@ -29,8 +22,7 @@ function startBot() {
     host: CONFIG.host,
     port: CONFIG.port,
     username: CONFIG.username,
-    version: CONFIG.version,
-    agent: agent
+    version: CONFIG.version
   });
 
   let inSurvival = false;
@@ -38,7 +30,7 @@ function startBot() {
   bot.on('spawn', async () => {
     if (inSurvival) return;
 
-    console.log('¡Conectado exitosamente con Proxy SOCKS5!');
+    console.log('¡Conectado exitosamente desde Wi-Fi local!');
 
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
@@ -78,7 +70,7 @@ function startBot() {
     inSurvival = false;
   });
 
-  bot.on('error', err => console.log('Error del bot/proxy:', err.message));
+  bot.on('error', err => console.log('Error:', err.message));
 
   bot.on('end', () => {
     inSurvival = false;
