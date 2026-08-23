@@ -22,15 +22,19 @@ function startBot() {
     host: CONFIG.host,
     port: CONFIG.port,
     username: CONFIG.username,
-    version: CONFIG.version
+    version: CONFIG.version,
+    hideErrors: true // <-- Esto evita que el bot rompa la conexión por paquetes de texto coloreados
   });
 
   let inSurvival = false;
 
+  // Manejo de errores de paquetes desalineados en 1.21
+  bot._client.on('packet_header', () => {}); 
+
   bot.on('spawn', async () => {
     if (inSurvival) return;
 
-    console.log('¡Conectado exitosamente desde Wi-Fi local!');
+    console.log('¡Conectado exitosamente sin VPN!');
 
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
@@ -70,7 +74,7 @@ function startBot() {
     inSurvival = false;
   });
 
-  bot.on('error', err => console.log('Error:', err.message));
+  bot.on('error', err => console.log('Error silenciado:', err.message));
 
   bot.on('end', () => {
     inSurvival = false;
@@ -78,5 +82,4 @@ function startBot() {
     setTimeout(startBot, 15000);
   });
 }
-
 startBot();
