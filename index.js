@@ -102,7 +102,9 @@ function startBot() {
   });
 
   bot.on('kicked', (reason) => {
-    console.log('Expulsado del servidor.');
+    // Convierte el objeto de respuesta en texto plano
+    const cleanReason = typeof reason === 'object' ? JSON.stringify(reason) : reason;
+    console.log('MOTIVO EXACTO DE EXPULSIÓN:', cleanReason);
     inSurvival = false;
   });
 
