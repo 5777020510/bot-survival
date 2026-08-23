@@ -15,11 +15,11 @@ const proxyUrl = 'http://nrsmplds:ty62hirpi3jq@31.59.20.176:6754';
 const agent = new HttpProxyAgent(proxyUrl);
 
 const CONFIG = {
-  host: 'mc.ipdetuservidor.com', // <-- PON AQUÍ LA IP DE TU SERVIDOR DE MINECRAFT
+  host: 'fancyverso.net', // <-- PON AQUÍ LA IP DE TU SERVIDOR DE MINECRAFT
   port: 25565,                  // <-- PUERTO
-  username: 'TuNickNoPremium',   // <-- TU NICK
-  version: '1.21.1',             // <-- TU VERSIÓN DE MINECRAFT
-  passwordLogin: 'TuPassword'    // <-- TU CONTRASEÑA EN EL SERVIDOR
+  username: 'xafkfx',   // <-- TU NICK
+  version: '1.21.11',             // <-- TU VERSIÓN DE MINECRAFT
+  passwordLogin: 'xafk123'    // <-- TU CONTRASEÑA EN EL SERVIDOR
 };
 
 function startBot() {
