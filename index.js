@@ -17,7 +17,8 @@ function startBot() {
     port: CONFIG.port,
     username: CONFIG.username,
     version: CONFIG.version,
-    checkTimeoutInterval: 60000
+    viewDistance: 'tiny', // Carga mínima de chunks para no colapsar los datos móviles
+    checkTimeoutInterval: 120000 // Soporte para micro-lag de red móvil
   });
 
   let inSurvival = false;
@@ -33,9 +34,10 @@ function startBot() {
   function iniciarBucleReconexion() {
     if (intervalPlaySurvival) return;
     
-    console.log('[SISTEMA] Iniciando bucle de reintento /play survival...');
+    console.log('[SISTEMA] Iniciando intento de ingreso a Survival...');
     bot.chat('/play survival');
 
+    // Intervalo espaciado a 8s para no saturar la red al transferir de servidor
     intervalPlaySurvival = setInterval(() => {
       if (!inSurvival) {
         console.log('[SISTEMA] Reintentando /play survival...');
@@ -43,9 +45,10 @@ function startBot() {
       } else {
         detencionBucle();
       }
-    }, 6000);
+    }, 8000);
   }
 
+  // Ignorar errores de paquetes corruptos por datos inestables
   bot._client.on('error', (err) => {});
 
   bot.on('spawn', async () => {
@@ -53,11 +56,12 @@ function startBot() {
     detencionBucle();
     inSurvival = false;
 
+    // Pausa inicial para estabilizar la señal antes de hacer nada
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
       console.log('[SISTEMA] Login enviado.');
       iniciarBucleReconexion();
-    }, 3000);
+    }, 4000);
   });
 
   bot.on('chat', (username, message) => {
@@ -69,7 +73,6 @@ function startBot() {
     }
   });
 
-  // Detectar mensajes con las frases exactas del servidor
   bot.on('message', (jsonMsg) => {
     const txt = jsonMsg.toString().trim();
     if (!txt) return;
@@ -77,7 +80,6 @@ function startBot() {
     console.log(`[SERVIDOR] ${txt}`);
     const txtLower = txt.toLowerCase();
 
-    // 1. Confirmación de entrada a Survival
     if (
       txtLower.includes('conectando a survival') || 
       txtLower.includes('enviando a survival') ||
@@ -89,15 +91,14 @@ function startBot() {
       console.log('[SISTEMA] ¡Confirmado en Survival! Bucle detenido.');
     }
 
-    // 2. Detección exacta de expulsión al Lobby tras el reinicio
     if (
-      txtLower.includes('You were kicked from Survival-Worlds') ||
-      txtLower.includes('Server is restarting') ||
+      txtLower.includes('you were kicked from survival') ||
+      txtLower.includes('server is restarting') ||
       txtLower.includes('bienvenid@ xafkfx') ||
       txtLower.includes('reiniciando')
     ) {
       if (inSurvival) {
-        console.log('[SISTEMA] Reinicio de Survival detectado. Reactivando /play survival...');
+        console.log('[SISTEMA] Reinicio o caída a Lobby detectada. Reactivando /play survival...');
         inSurvival = false;
         iniciarBucleReconexion();
       }
