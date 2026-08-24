@@ -21,26 +21,43 @@ function startBot() {
   });
 
   let inSurvival = false;
+  let intervalPlaySurvival = null;
 
-  // Silenciar errores internos de paquetes NBT de versiones modernas
+  // Limpiar el reloj para que deje de enviar el comando una vez dentro
+  function detencionBucle() {
+    if (intervalPlaySurvival) {
+      clearInterval(intervalPlaySurvival);
+      intervalPlaySurvival = null;
+    }
+  }
+
+  // Silenciar errores internos NBT
   bot._client.on('error', (err) => {});
 
   bot.on('spawn', async () => {
-    console.log('[SISTEMA] ¡Conectado al lobby del servidor!');
+    console.log('[SISTEMA] ¡Conectado al servidor/lobby!');
+    detencionBucle();
+    inSurvival = false;
 
-    // 1. Mandar /login a los 4 segundos de entrar al Lobby
+    // 1. Loguearse a los 3 segundos
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
-      console.log('[SISTEMA] Login enviado. Esperando 2 minutos para asegurar el Survival...');
-    }, 4000);
+      console.log('[SISTEMA] Login enviado. Iniciando intentos de ingreso al Survival...');
 
-    // 2. Esperar 2 minutos (120 seg) tras la reconexión y enviar comando directo
-    setTimeout(() => {
-      console.log('[SISTEMA] Enviando comando /play survival...');
+      // 2. Intentar entrar inmediatamente la primera vez
       bot.chat('/play survival');
-      inSurvival = true;
-      console.log('[SISTEMA] ¡Comando enviado! Entrando al Survival...');
-    }, 124000); // 120 seg de espera + 4 seg del login
+
+      // 3. Reintentar /play survival cada 6 segundos hasta lograr entrar
+      intervalPlaySurvival = setInterval(() => {
+        if (!inSurvival) {
+          console.log('[SISTEMA] Reintentando /play survival...');
+          bot.chat('/play survival');
+        } else {
+          detencionBucle();
+        }
+      }, 6000);
+
+    }, 3000);
   });
 
   // Escuchar el chat del servidor en texto plano
@@ -53,14 +70,30 @@ function startBot() {
     }
   });
 
-  // Traducir mensajes del sistema a texto plano en consola
+  // Traducir mensajes del servidor y detectar ingreso al Survival
   bot.on('message', (jsonMsg) => {
     const txt = jsonMsg.toString().trim();
-    if (txt) console.log(`[SERVIDOR] ${txt}`);
+    if (!txt) return;
+
+    console.log(`[SERVIDOR] ${txt}`);
+
+    // Si el servidor confirma la entrada al Survival
+    const txtLower = txt.toLowerCase();
+    if (
+      txtLower.includes('conectando a survival') || 
+      txtLower.includes('enviando a survival') ||
+      txtLower.includes('bienvenido a survival') ||
+      txtLower.includes('conectado a survival')
+    ) {
+      inSurvival = true;
+      detencionBucle();
+      console.log('[SISTEMA] ¡Ingreso al Survival confirmado! Bucle de comando detenido.');
+    }
   });
 
-  // Capturar la expulsión traducida a texto claro
+  // Capturar expulsión
   bot.on('kicked', (reason) => {
+    detencionBucle();
     let motivoLimpio = reason;
     try {
       if (typeof reason === 'object') {
@@ -79,6 +112,7 @@ function startBot() {
   });
 
   bot.on('end', () => {
+    detencionBucle();
     inSurvival = false;
     console.log('[SISTEMA] Conexión perdida. Reconectando en 15 segundos...\n');
     setTimeout(startBot, 15000);
