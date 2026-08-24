@@ -22,76 +22,65 @@ function startBot() {
 
   let inSurvival = false;
 
-  // Evitar que errores de paquetes NBT tumben el bot
-  bot._client.on('error', (err) => {
-    if (err.message && err.message.includes('compound')) return;
-  });
+  // Silenciar errores internos de paquetes NBT de versiones modernas
+  bot._client.on('error', (err) => {});
 
   bot.on('spawn', async () => {
-    console.log('¡Conectado al servidor/lobby!');
+    console.log('[SISTEMA] ¡Conectado al lobby del servidor!');
 
-    // 1. Mandar /login a los 4 segundos
+    // 1. Mandar /login a los 4 segundos de entrar al Lobby
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
-      console.log('Login enviado.');
-      console.log('Esperando 2 minutos a que el Survival abra tras el reinicio...');
+      console.log('[SISTEMA] Login enviado. Esperando 2 minutos para asegurar el Survival...');
     }, 4000);
 
-    // 2. Esperar 2 minutos (120.000 ms) antes de intentar entrar al Survival
+    // 2. Esperar 2 minutos (120 seg) tras la reconexión y enviar comando directo
     setTimeout(() => {
-      console.log('Pasaron los 2 minutos. Intentando entrar al Survival...');
-      bot.setControlState('forward', true);
-
-      setTimeout(() => {
-        bot.setControlState('forward', false);
-
-        setTimeout(() => {
-          const entity = bot.nearestEntity(e => e.type === 'player' || e.type === 'mob');
-          if (entity) {
-            bot.activateEntity(entity);
-            bot.attack(entity);
-          } else {
-            bot.swingArm('mainhand');
-          }
-
-          inSurvival = true;
-          console.log('¡Bot adentro del Survival!');
-
-        }, 1000);
-
-      }, 2500);
-
+      console.log('[SISTEMA] Enviando comando /play survival...');
+      bot.chat('/play survival');
+      inSurvival = true;
+      console.log('[SISTEMA] ¡Comando enviado! Entrando al Survival...');
     }, 124000); // 120 seg de espera + 4 seg del login
   });
 
-  // Escuchar el chat del servidor
+  // Escuchar el chat del servidor en texto plano
   bot.on('chat', (username, message) => {
     if (username === bot.username) return;
-    console.log(`[Chat] ${username}: ${message}`);
+    console.log(`[CHAT] ${username}: ${message}`);
 
     if (message === '!hola') {
       bot.chat('¡Hola! Soy un bot AFK funcionando 24/7.');
     }
   });
 
+  // Traducir mensajes del sistema a texto plano en consola
   bot.on('message', (jsonMsg) => {
-    console.log(jsonMsg.toString());
+    const txt = jsonMsg.toString().trim();
+    if (txt) console.log(`[SERVIDOR] ${txt}`);
   });
 
+  // Capturar la expulsión traducida a texto claro
   bot.on('kicked', (reason) => {
-    console.log('Expulsado por:', JSON.stringify(reason));
+    let motivoLimpio = reason;
+    try {
+      if (typeof reason === 'object') {
+        motivoLimpio = reason.value?.text?.value || JSON.stringify(reason);
+      }
+    } catch (e) {
+      motivoLimpio = reason;
+    }
+
+    console.log(`\n[EXPULSADO] Motivo real: "${motivoLimpio}"\n`);
     inSurvival = false;
   });
 
   bot.on('error', err => {
-    if (!err.message.includes('compound')) {
-      console.log('Error:', err.message);
-    }
+    console.log('[ERROR CONEXION]', err.message);
   });
 
   bot.on('end', () => {
     inSurvival = false;
-    console.log('Reconectando en 15s...');
+    console.log('[SISTEMA] Conexión perdida. Reconectando en 15 segundos...\n');
     setTimeout(startBot, 15000);
   });
 }
