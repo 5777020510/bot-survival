@@ -7,7 +7,7 @@ const CONFIG = {
   host: 'fancyverso.net',
   port: 25565,
   username: 'xafkfx',
-  version: '1.20.4', // Usamos 1.20.4 para evitar el fallo de NBT de la 1.21 en viaversion
+  version: '1.20.4',
   passwordLogin: 'xafk123'
 };
 
@@ -22,31 +22,30 @@ function startBot() {
 
   let inSurvival = false;
 
-  // Anular el choque de paquetes NBT de chat
+  // Evitar que errores de paquetes NBT tumben el bot
   bot._client.on('error', (err) => {
     if (err.message && err.message.includes('compound')) return;
   });
 
   bot.on('spawn', async () => {
-    if (inSurvival) return;
+    console.log('¡Conectado al servidor/lobby!');
 
-    console.log('¡Conectado al servidor!');
-
+    // 1. Mandar /login a los 4 segundos
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
       console.log('Login enviado.');
+      console.log('Esperando 2 minutos a que el Survival abra tras el reinicio...');
     }, 4000);
 
+    // 2. Esperar 2 minutos (120.000 ms) antes de intentar entrar al Survival
     setTimeout(() => {
-      console.log('Avanzando hacia el NPC...');
+      console.log('Pasaron los 2 minutos. Intentando entrar al Survival...');
       bot.setControlState('forward', true);
 
       setTimeout(() => {
         bot.setControlState('forward', false);
 
         setTimeout(() => {
-          console.log('Entrando al Survival...');
-
           const entity = bot.nearestEntity(e => e.type === 'player' || e.type === 'mob');
           if (entity) {
             bot.activateEntity(entity);
@@ -56,13 +55,27 @@ function startBot() {
           }
 
           inSurvival = true;
-          console.log('¡Bot dentro del Survival!');
+          console.log('¡Bot adentro del Survival!');
 
         }, 1000);
 
       }, 2500);
 
-    }, 8000);
+    }, 124000); // 120 seg de espera + 4 seg del login
+  });
+
+  // Escuchar el chat del servidor
+  bot.on('chat', (username, message) => {
+    if (username === bot.username) return;
+    console.log(`[Chat] ${username}: ${message}`);
+
+    if (message === '!hola') {
+      bot.chat('¡Hola! Soy un bot AFK funcionando 24/7.');
+    }
+  });
+
+  bot.on('message', (jsonMsg) => {
+    console.log(jsonMsg.toString());
   });
 
   bot.on('kicked', (reason) => {
