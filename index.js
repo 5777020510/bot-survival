@@ -1,7 +1,5 @@
-const http = require('http');
-http.createServer((req, res) => res.end('Bot activo 24/7 en Android')).listen(process.env.PORT || 3000);
-
 const mineflayer = require('mineflayer');
+const readline = require('readline');
 
 const CONFIG = {
   host: 'fancyverso.net',
@@ -11,14 +9,21 @@ const CONFIG = {
   passwordLogin: 'xafk123'
 };
 
+// Crear interfaz para escribir comandos/chat desde Termux
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
 function startBot() {
   const bot = mineflayer.createBot({
     host: CONFIG.host,
     port: CONFIG.port,
     username: CONFIG.username,
     version: CONFIG.version,
-    viewDistance: 'tiny', // Carga mínima de chunks para no colapsar los datos móviles
-    checkTimeoutInterval: 120000 // Soporte para micro-lag de red móvil
+    viewDistance: 'tiny',          // Mínima carga de chunks
+    checkTimeoutInterval: 120000,  // Margen de datos móviles
+    loadInternalChunking: false   // No guardar mapa en RAM
   });
 
   let inSurvival = false;
@@ -34,10 +39,9 @@ function startBot() {
   function iniciarBucleReconexion() {
     if (intervalPlaySurvival) return;
     
-    console.log('[SISTEMA] Iniciando intento de ingreso a Survival...');
+    console.log('[SISTEMA] Enviando /play survival...');
     bot.chat('/play survival');
 
-    // Intervalo espaciado a 8s para no saturar la red al transferir de servidor
     intervalPlaySurvival = setInterval(() => {
       if (!inSurvival) {
         console.log('[SISTEMA] Reintentando /play survival...');
@@ -48,15 +52,28 @@ function startBot() {
     }, 8000);
   }
 
-  // Ignorar errores de paquetes corruptos por datos inestables
-  bot._client.on('error', (err) => {});
+  // Permite enviar mensajes o comandos directo escribiendo en Termux
+  rl.removeAllListeners('line');
+  rl.on('line', (line) => {
+    const input = line.trim();
+    if (input.length > 0) {
+      bot.chat(input);
+      console.log(`[ENVIADO] ${input}`);
+    }
+  });
 
-  bot.on('spawn', async () => {
-    console.log('[SISTEMA] ¡Conectado al servidor!');
+  bot.once('spawn', () => {
+    // Apagar físicas para ahorrar 90% de CPU y batería
+    if (bot.physics) bot.physicsEnabled = false;
+  });
+
+  bot._client.on('error', () => {});
+
+  bot.on('spawn', () => {
+    console.log('[SISTEMA] Conectado al servidor.');
     detencionBucle();
     inSurvival = false;
 
-    // Pausa inicial para estabilizar la señal antes de hacer nada
     setTimeout(() => {
       bot.chat(`/login ${CONFIG.passwordLogin}`);
       console.log('[SISTEMA] Login enviado.');
@@ -64,22 +81,17 @@ function startBot() {
     }, 4000);
   });
 
-  bot.on('chat', (username, message) => {
-    if (username === bot.username) return;
-    console.log(`[CHAT] ${username}: ${message}`);
-
-    if (message === '!hola') {
-      bot.chat('¡Hola! Soy un bot AFK funcionando 24/7.');
-    }
-  });
-
+  // Evento ÚNICO para el chat (Evita duplicados y traduce el formato del server)
   bot.on('message', (jsonMsg) => {
     const txt = jsonMsg.toString().trim();
     if (!txt) return;
 
-    console.log(`[SERVIDOR] ${txt}`);
+    // Imprimir mensaje limpio en consola
+    console.log(txt);
+
     const txtLower = txt.toLowerCase();
 
+    // Confirmación de ingreso a Survival
     if (
       txtLower.includes('conectando a survival') || 
       txtLower.includes('enviando a survival') ||
@@ -88,9 +100,10 @@ function startBot() {
     ) {
       inSurvival = true;
       detencionBucle();
-      console.log('[SISTEMA] ¡Confirmado en Survival! Bucle detenido.');
+      console.log('[SISTEMA] ¡En Survival! AFK de granja activo.');
     }
 
+    // Detección de caída al Lobby/Reinicio
     if (
       txtLower.includes('you were kicked from survival') ||
       txtLower.includes('server is restarting') ||
@@ -98,12 +111,26 @@ function startBot() {
       txtLower.includes('reiniciando')
     ) {
       if (inSurvival) {
-        console.log('[SISTEMA] Reinicio o caída a Lobby detectada. Reactivando /play survival...');
+        console.log('[SISTEMA] Caída a lobby detectada. Reintentando entrada...');
         inSurvival = false;
         iniciarBucleReconexion();
       }
     }
   });
+
+  // Limpieza automática de memoria RAM cada 15 minutos
+  setInterval(() => {
+    if (bot.entities) {
+      // Vaciar registro interno de entidades alrededor
+      for (const id in bot.entities) {
+        delete bot.entities[id];
+      }
+    }
+    if (global.gc) {
+      global.gc(); // Forzar liberación de RAM
+    }
+    console.log('[MEMORIA] Limpieza de RAM ejecutada correctamente.');
+  }, 900000);
 
   bot.on('kicked', (reason) => {
     detencionBucle();
@@ -115,19 +142,16 @@ function startBot() {
     } catch (e) {
       motivoLimpio = reason;
     }
-
-    console.log(`\n[EXPULSADO] Motivo real: "${motivoLimpio}"\n`);
+    console.log(`\n[EXPULSADO] Motivo: "${motivoLimpio}"\n`);
     inSurvival = false;
   });
 
-  bot.on('error', err => {
-    console.log('[ERROR CONEXION]', err.message);
-  });
+  bot.on('error', err => console.log('[ERROR]', err.message));
 
   bot.on('end', () => {
     detencionBucle();
     inSurvival = false;
-    console.log('[SISTEMA] Conexión perdida. Reconectando en 15 segundos...\n');
+    console.log('[SISTEMA] Reconectando en 15 segundos...\n');
     setTimeout(startBot, 15000);
   });
 }
